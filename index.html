@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ByFel OS · Console</title>
+<style>
+  :root{
+    --bg:#141310; --surface:#1c1a16; --ink:#ece7dc; --muted:#a49c8d; --faint:#7c7466;
+    --line:#332f28; --accent:#e97a54; --ok:#5fbf7d;
+    --serif:"Iowan Old Style",Georgia,ui-serif,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);
+    display:grid;place-items:center;padding:24px;
+    background-image:radial-gradient(circle at 1px 1px, #2a2721 1px, transparent 0);
+    background-size:26px 26px}
+  .card{width:min(420px,92vw);background:var(--surface);border:1px solid var(--line);
+    border-radius:18px;padding:36px 34px;text-align:center;
+    box-shadow:0 1px 2px rgba(0,0,0,.35),0 18px 48px rgba(0,0,0,.45)}
+  .mark{width:52px;height:52px;border-radius:14px;background:var(--accent);color:#141310;
+    display:grid;place-items:center;font-family:var(--serif);font-size:30px;font-weight:600;margin:0 auto 18px}
+  h1{font-family:var(--serif);font-weight:400;font-size:28px;letter-spacing:-.01em}
+  .sub{font-family:var(--mono);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--faint);margin:6px 0 26px}
+  .status{display:flex;align-items:center;justify-content:center;gap:9px;
+    font-size:14.5px;color:var(--muted);min-height:44px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--faint);flex:none}
+  .dot.live{background:var(--ok);animation:pulse 1.3s infinite}
+  .dot.off{background:var(--faint)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(95,191,125,.55)}70%{box-shadow:0 0 0 8px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .btn{display:inline-block;margin-top:20px;background:var(--accent);color:#141310;font-weight:600;
+    text-decoration:none;font-size:15px;padding:12px 26px;border-radius:11px}
+  .btn:hover{filter:brightness(1.07)}
+  .hint{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);
+    font-size:12.5px;color:var(--faint);line-height:1.6}
+  .hint code{font-family:var(--mono);background:#24211b;padding:2px 7px;border-radius:5px;font-size:11px}
+  .hide{display:none}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="mark">B</div>
+    <h1>ByFel OS</h1>
+    <div class="sub">Console do estúdio</div>
+
+    <div class="status" id="st">
+      <span class="dot" id="dot"></span><span id="msg">procurando o console…</span>
+    </div>
+    <a class="btn hide" id="go" href="#">Abrir console</a>
+
+    <p class="hint hide" id="offhint">
+      O console roda no Mac do estúdio e ele está desligado agora.<br>
+      Para ligar: <code>tunnel.sh</code> no Mac — esta página passa a apontar pro link novo sozinha.
+    </p>
+  </main>
+
+<script>
+(async () => {
+  const dot = document.getElementById("dot"), msg = document.getElementById("msg");
+  const go = document.getElementById("go"), off = document.getElementById("offhint");
+  const offline = (t) => { dot.className = "dot off"; msg.textContent = t; off.classList.remove("hide"); };
+  try {
+    const cur = await fetch("./current.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json());
+    if (!cur.url) return offline("console ainda não publicado");
+    msg.textContent = "verificando o console…";
+    // /health é público e tem CORS: sucesso = console vivo; erro = túnel morto.
+    const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
+    const h = await fetch(cur.url + "/health?t=" + Date.now(), { signal: ctl.signal }).then(r => r.json());
+    if (h && h.ok) {
+      dot.className = "dot live"; msg.textContent = "console online — entrando…";
+      go.href = cur.url; go.classList.remove("hide");
+      setTimeout(() => { location.href = cur.url; }, 900);
+    } else offline("console offline");
+  } catch (e) { offline("console offline"); }
+})();
+</script>
+</body>
+</html>
