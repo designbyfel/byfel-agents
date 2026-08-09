@@ -39,6 +39,19 @@
   .hint{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);
     font-size:12.5px;color:var(--faint);line-height:1.6}
   .hint code{font-family:var(--mono);background:#24211b;padding:2px 7px;border-radius:5px;font-size:11px}
+  .keyform{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+  .keyform input[type=password]{width:100%;background:var(--bg);border:1px solid var(--line);
+    border-radius:11px;padding:12px 14px;font:inherit;font-size:15px;color:var(--ink);text-align:center}
+  .keyform input[type=password]::placeholder{color:var(--faint)}
+  .keyform input[type=password]:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+  .keyform .btn{margin-top:0;border:none;cursor:pointer;font-family:inherit;width:100%}
+  .remember{display:flex;align-items:center;justify-content:center;gap:7px;
+    font-size:12.5px;color:var(--faint);cursor:pointer}
+  .remember input{accent-color:var(--accent)}
+  .err{font-size:13px;color:#e06a5a}
+  .linkbtn{background:none;border:none;color:var(--faint);font:inherit;font-size:12px;
+    text-decoration:underline;cursor:pointer;margin-top:14px}
+  .linkbtn:hover{color:var(--muted)}
   .hide{display:none}
   @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
@@ -52,7 +65,16 @@
     <div class="status" id="st">
       <span class="dot" id="dot"></span><span id="msg">procurando o console…</span>
     </div>
+
+    <form class="keyform hide" id="keyform" autocomplete="on">
+      <input type="password" id="key" placeholder="senha" autocomplete="current-password" aria-label="senha">
+      <button class="btn" type="submit">Entrar</button>
+      <label class="remember"><input type="checkbox" id="remember" checked> lembrar neste dispositivo</label>
+      <span class="err hide" id="err">senha não confere</span>
+    </form>
+
     <a class="btn hide" id="go" href="#">Abrir console</a>
+    <button class="linkbtn hide" id="forget">esquecer senha</button>
 
     <p class="hint hide" id="offhint">
       O console roda no Mac do estúdio e ele está desligado agora.<br>
@@ -64,20 +86,49 @@
 (async () => {
   const dot = document.getElementById("dot"), msg = document.getElementById("msg");
   const go = document.getElementById("go"), off = document.getElementById("offhint");
+  const form = document.getElementById("keyform"), key = document.getElementById("key");
+  const remember = document.getElementById("remember"), err = document.getElementById("err");
+  const forget = document.getElementById("forget");
+  const KEY = "byfel_key";
   const offline = (t) => { dot.className = "dot off"; msg.textContent = t; off.classList.remove("hide"); };
+  // a senha fica só neste navegador; o console a recebe uma vez e guarda em cookie
+  const saved = () => localStorage.getItem(KEY) || sessionStorage.getItem(KEY);
+  const enter = (base, k) => { location.href = base + (k ? "/?k=" + encodeURIComponent(k) : ""); };
+
+  let cur;
   try {
-    const cur = await fetch("./current.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json());
+    cur = await fetch("./current.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json());
     if (!cur.url) return offline("console ainda não publicado");
     msg.textContent = "verificando o console…";
-    // /health é público e tem CORS: sucesso = console vivo; erro = túnel morto.
     const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
     const h = await fetch(cur.url + "/health?t=" + Date.now(), { signal: ctl.signal }).then(r => r.json());
-    if (h && h.ok) {
-      dot.className = "dot live"; msg.textContent = "console online — entrando…";
-      go.href = cur.url; go.classList.remove("hide");
-      setTimeout(() => { location.href = cur.url; }, 900);
-    } else offline("console offline");
-  } catch (e) { offline("console offline"); }
+    if (!h || !h.ok) return offline("console offline");
+  } catch (e) { return offline("console offline"); }
+
+  dot.className = "dot live";
+  const k = saved();
+  if (k) {                                   // já conhece a senha: entra direto
+    msg.textContent = "console online — entrando…";
+    go.href = cur.url; go.classList.remove("hide");
+    forget.classList.remove("hide");
+    setTimeout(() => enter(cur.url, k), 700);
+  } else {                                   // primeira vez: pede a senha aqui
+    msg.textContent = "console online";
+    form.classList.remove("hide");
+    key.focus();
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const v = key.value.trim();
+    if (!v) return;
+    err.classList.add("hide");
+    (remember.checked ? localStorage : sessionStorage).setItem(KEY, v);
+    enter(cur.url, v);
+  });
+  forget.addEventListener("click", () => {
+    localStorage.removeItem(KEY); sessionStorage.removeItem(KEY); location.reload();
+  });
 })();
 </script>
 </body>
