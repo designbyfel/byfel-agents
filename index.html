@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>ByFel OS · Console</title>
+<title>byFel Dashboard</title>
 <style>
   :root{
     --bg:#141310; --surface:#1c1a16; --ink:#ece7dc; --muted:#a49c8d; --faint:#7c7466;
@@ -59,11 +59,11 @@
 <body>
   <main class="card">
     <div class="mark">B</div>
-    <h1>ByFel OS</h1>
-    <div class="sub">Console do estúdio</div>
+    <h1>byFel</h1>
+    <div class="sub">Dashboard do estúdio</div>
 
     <div class="status" id="st">
-      <span class="dot" id="dot"></span><span id="msg">procurando o console…</span>
+      <span class="dot" id="dot"></span><span id="msg">procurando o dashboard…</span>
     </div>
 
     <form class="keyform hide" id="keyform" autocomplete="on">
@@ -73,11 +73,11 @@
       <span class="err hide" id="err">senha não confere</span>
     </form>
 
-    <a class="btn hide" id="go" href="#">Abrir console</a>
+    <a class="btn hide" id="go" href="#">Abrir dashboard</a>
     <button class="linkbtn hide" id="forget">esquecer senha</button>
 
     <p class="hint hide" id="offhint">
-      O console roda no Mac do estúdio e ele está desligado agora.<br>
+      O dashboard roda no Mac do estúdio e ele está desligado agora.<br>
       Para ligar: <code>tunnel.sh</code> no Mac — esta página passa a apontar pro link novo sozinha.
     </p>
   </main>
@@ -91,29 +91,29 @@
   const forget = document.getElementById("forget");
   const KEY = "byfel_key";
   const offline = (t) => { dot.className = "dot off"; msg.textContent = t; off.classList.remove("hide"); };
-  // a senha fica só neste navegador; o console a recebe uma vez e guarda em cookie
+  // a senha fica só neste navegador; o dashboard a recebe uma vez e guarda em cookie
   const saved = () => localStorage.getItem(KEY) || sessionStorage.getItem(KEY);
   const enter = (base, k) => { location.href = base + (k ? "/?k=" + encodeURIComponent(k) : ""); };
 
   let cur;
   try {
     cur = await fetch("./current.json?t=" + Date.now(), { cache: "no-store" }).then(r => r.json());
-    if (!cur.url) return offline("console ainda não publicado");
-    msg.textContent = "verificando o console…";
+    if (!cur.url) return offline("dashboard ainda não publicado");
+    msg.textContent = "verificando o dashboard…";
     const ctl = new AbortController(); setTimeout(() => ctl.abort(), 6000);
     const h = await fetch(cur.url + "/health?t=" + Date.now(), { signal: ctl.signal }).then(r => r.json());
-    if (!h || !h.ok) return offline("console offline");
-  } catch (e) { return offline("console offline"); }
+    if (!h || !h.ok) return offline("dashboard offline");
+  } catch (e) { return offline("dashboard offline"); }
 
   dot.className = "dot live";
   const k = saved();
   if (k) {                                   // já conhece a senha: entra direto
-    msg.textContent = "console online — entrando…";
+    msg.textContent = "dashboard online — entrando…";
     go.href = cur.url; go.classList.remove("hide");
     forget.classList.remove("hide");
     setTimeout(() => enter(cur.url, k), 700);
   } else {                                   // primeira vez: pede a senha aqui
-    msg.textContent = "console online";
+    msg.textContent = "dashboard online";
     form.classList.remove("hide");
     key.focus();
   }
